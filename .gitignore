@@ -1,0 +1,4 @@
+config.php
+bin/preprocessor
+.DS_Store
+!.gitignore
