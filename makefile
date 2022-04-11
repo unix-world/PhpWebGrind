@@ -1,4 +1,4 @@
-CXX = g++
+CXX = eg++
 SRCS = library/preprocessor.cpp
 OUT = bin/preprocessor
 

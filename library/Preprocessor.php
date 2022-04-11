@@ -44,17 +44,17 @@ class Webgrind_Preprocessor
      */
     static function parse($inFile, $outFile)
     {
+        // If possible, use the binary preprocessor
+        if (self::binaryParse($inFile, $outFile)) {
+            return;
+        }
+
         $in = @fopen($inFile, 'rb');
         if (!$in)
             throw new Exception('Could not open '.$inFile.' for reading.');
         $out = @fopen($outFile, 'w+b');
         if (!$out)
             throw new Exception('Could not open '.$outFile.' for writing.');
-
-        // If possible, use the binary preprocessor
-        if (self::binaryParse($inFile, $outFile)) {
-            return;
-        }
 
         $proxyFunctions = array_flip(Webgrind_Config::$proxyFunctions);
         $proxyQueue = array();
@@ -69,14 +69,23 @@ class Webgrind_Preprocessor
                 // Found invocation of function. Read function name
                 fscanf($in, "fn=%[^\n\r]s", $function);
                 $function = self::getCompressedName($function, false);
-                // Special case for ENTRY_POINT - it contains summary header
+
                 if (self::ENTRY_POINT == $function) {
-                    fgets($in);
-                    $headers[] = fgets($in);
-                    fgets($in);
+                    $buffer = fgets($in);
+                    if(strlen($buffer) > 0 && ctype_digit($buffer[0])) {
+                        // Cost line
+                        sscanf($buffer, "%d %d", $lnr, $cost);
+                    } else {
+                        // Special case for ENTRY_POINT - it contains summary header
+                        $headers[] = fgets($in);
+                        fgets($in);
+                        // Cost line
+                        fscanf($in, "%d %d", $lnr, $cost);
+                    }
+                } else {
+                    // Cost line
+                    fscanf($in, "%d %d", $lnr, $cost);
                 }
-                // Cost line
-                fscanf($in, "%d %d", $lnr, $cost);
 
                 if (!isset($functionNames[$function])) {
                     $index = $nextFuncNr++;
@@ -189,6 +198,9 @@ class Webgrind_Preprocessor
         foreach ($functionAddresses as $address) {
             fwrite($out, pack(self::NR_FORMAT, $address));
         }
+
+        fclose($in);
+        fclose($out);
     }
 
     /**
@@ -232,8 +244,8 @@ class Webgrind_Preprocessor
         foreach (Webgrind_Config::$proxyFunctions as $function) {
             $cmd .= ' '.escapeshellarg($function);
         }
-        exec($cmd);
-        return true;
+        exec($cmd, $output, $ret);
+        return $ret == 0;
     }
 
 }

@@ -13,7 +13,7 @@ if (PHP_SAPI == 'cli-server') {
 
 class Webgrind_MasterConfig
 {
-    static $webgrindVersion = '1.5';
+    static $webgrindVersion = '1.9';
 }
 
 require './config.php';
@@ -129,17 +129,15 @@ try {
         case 'fileviewer':
             $file = get('file');
 
-            if ($file && $file!='') {
-                $message = '';
-                if (!file_exists($file)) {
-                    $message = $file.' does not exist.';
-                } else if (!is_readable($file)) {
-                    $message = $file.' is not readable.';
-                } else if (is_dir($file)) {
-                    $message = $file.' is a directory.';
+            $message = 'No file to view.';
+            if ($file) {
+                $message = '<tt>' . htmlspecialchars($file) . '</tt> is not readable. '
+                    . 'Modify <tt>exposeServerFile()</tt> in <tt>webgrind/config.php</tt> to grant access.';
+                $file = Webgrind_Config::exposeServerFile($file);
+                if ($file && is_file($file) && is_readable($file)) {
+                    // Access granted.
+                    $message = '';
                 }
-            } else {
-                $message = 'No file to view';
             }
             require 'templates/fileviewer.phtml';
         break;
@@ -188,6 +186,34 @@ try {
                 header('Content-type: application/json');
                 echo $response;
             }
+        break;
+
+        case 'download_link':
+            $file = Webgrind_Config::exposeServerFile(Webgrind_Config::xdebugOutputDir().get('file'));
+
+            if (empty($file)) {
+                sendJson(array('error' => 'No file found or access denied!'));
+                exit;
+            }
+
+            $params = array('op' => 'download_file', 'file' => get('file'));
+            sendJson(array('done' => '?'.http_build_query($params)));
+        break;
+
+        case 'download_file':
+            $file = Webgrind_Config::exposeServerFile(Webgrind_Config::xdebugOutputDir().get('file'));
+
+            if (empty($file)) {
+                exit;
+            }
+
+            header('Cache-Control: public');
+            header('Content-Description: File Transfer');
+            header('Content-Disposition: attachment; filename='.get('file'));
+            header('Content-Type: text/plain');
+            header('Content-Transfer-Encoding: binary');
+
+            readfile($file);
         break;
 
         case 'clear_files':

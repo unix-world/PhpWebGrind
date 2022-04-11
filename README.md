@@ -1,6 +1,6 @@
 Webgrind
 ========
-Webgrind is a [Xdebug](http://www.xdebug.org) profiling web frontend in PHP. It implements a subset of the features of [kcachegrind](http://kcachegrind.sourceforge.net/html/Home.html) and installs in seconds and works on all platforms. For quick'n'dirty optimizations it does the job. Here's a screenshot showing the output from profiling:
+Webgrind is an [Xdebug](http://www.xdebug.org) profiling web frontend in PHP. It implements a subset of the features of [kcachegrind](https://kcachegrind.github.io/) and installs in seconds and works on all platforms. For quick'n'dirty optimizations it does the job. Here's a screenshot showing the output from profiling:
 
 [![](http://jokke.dk/media/2008-webgrind/webgrind_small.png)](http://jokke.dk/media/2008-webgrind/webgrind_large.png)
 
@@ -24,10 +24,27 @@ Alternatively, on PHP 5.4+ run the application using the PHP built-in server
 with the command `composer serve` or `php -S 0.0.0.0:8080 index.php` if you
 are not using Composer.
 
-For faster preprocessing under linux, give write access to the `bin` subdirectory
-or execute `make` in the unzipped folder (requires GCC).
+For faster preprocessing, give write access to the `bin` subdirectory, or compile manually:
+  * Linux / Mac OS X: execute `make` in the unzipped folder (requires GCC or Clang.)
+  * Windows: execute `nmake -f NMakeFile` in the unzipped folder (requires Visual Studio 2015 or higher.)
 
-See the [Installation Wiki page](https://github.com/jokkedk/webgrind/wiki/Installation) for more
+See the [Installation Wiki page](https://github.com/jokkedk/webgrind/wiki/Installation) for more.
+
+Use with Docker
+---------------
+
+Instead of uploading webgrind to a web server or starting a local one, you can use the official Docker image to
+quickly inspect existing xDebug profiling files. To use the Docker image, run the following command with
+`/path/to/xdebug/files` replaced by the actual path of your profiling files.
+
+```
+docker run --rm -v /path/to/xdebug/files:/tmp -p 80:80 jokkedk/webgrind:latest
+```
+
+Now open `http://localhost` in your browser. After using webgrind you can stop the Docker container by pressing
+`CTRL / Strg` + `C`.
+
+To use the built-in file viewer, mount the appropriate files under `/host` in the container.
 
 Credits
 -------

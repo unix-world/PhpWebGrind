@@ -89,6 +89,8 @@ class Webgrind_Reader
         if ($version!=self::FILE_FORMAT_VERSION)
             throw new Exception('Datafile not correct version. Found '.$version.' expected '.self::FILE_FORMAT_VERSION);
         $this->functionPos = $this->read($functionCount);
+        if (!is_array($this->functionPos))
+            $this->functionPos = array($this->functionPos);
     }
 
     /**
@@ -202,8 +204,11 @@ class Webgrind_Reader
             while ($line=$this->readLine()) {
                 $parts = explode(': ',$line);
                 if ($parts[0] == 'summary') {
+                    // According to https://github.com/xdebug/xdebug/commit/926808a6e0204f5835a617caa3581b45f6d82a6c#diff-1a570e993c4d7f2e341ba24905b8b2cdR355
+                    // summary now includes time + memory usage, webgrind only tracks the time from the summary
+                    $subParts = explode(' ', $parts[1]);
                     $this->headers['runs']++;
-                    $this->headers['summary'] += $parts[1];
+                    $this->headers['summary'] += (double) $subParts[0];
                 } else {
                     $this->headers[$parts[0]] = $parts[1];
                 }
@@ -230,12 +235,20 @@ class Webgrind_Reader
             return number_format($result, 2, '.', '');
         }
 
+        // Check for 10-nanosecond resolution (Xdebug 3).
+        // TODO: Time should be scaled in the preprocessor to avoid integer overflow.
+        // https://github.com/jokkedk/webgrind/pull/141#issuecomment-852623996
+        $events = $this->getHeader('events');
+        if (stripos($events, 'Time_(10ns)') !== false) {
+            $cost /= 100;
+        }
+
         if ($format == 'msec') {
             return round($cost/1000, 0);
         }
 
         // Default usec
-        return $cost;
+        return round($cost);
     }
 
     private function read($numbers=1) {
